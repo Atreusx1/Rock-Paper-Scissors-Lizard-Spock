@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "lib": ["es2023"],
+    "resolveJsonModule": true // Helpful for loading JSON data
+  },
+  "include": ["./scripts", "./test"], // Ensure Hardhat knows which files to compile
+  "files": ["./hardhat.config.ts"]
+}
