@@ -11,13 +11,10 @@ function Connect({ onConnected }) {
     setError("");
 
     try {
-      // Use the utility function that already has network checking built-in
       const { signer, account } = await connectWallet();
-      // Pass the successful result up to the parent
       onConnected({ signer, account });
     } catch (err) {
       console.error(err);
-      // Keep the error local to this component
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -40,7 +37,7 @@ function Connect({ onConnected }) {
       {error && <p className={styles.error}>{error}</p>}
 
       <div className={styles.info}>
-        <p>Ensure your wallet is connected to the correct Ethereum testnet.</p>
+        <p>Ensure that your wallet is connected to the correct testnet.</p>
       </div>
     </div>
   );
