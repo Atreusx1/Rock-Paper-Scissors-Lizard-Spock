@@ -1,0 +1,44 @@
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+  text-align: center;
+  padding-top: 2rem;
+}
+
+.menu h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.account {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  background-color: var(--bg-secondary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.menu button {
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--secondary-btn-bg);
+  color: var(--secondary-btn-text);
+}
+
+.menu button:hover {
+  border-color: var(--border-color-focus);
+  background-color: var(--secondary-btn-hover-bg);
+}

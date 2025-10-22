@@ -1,0 +1,126 @@
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0.5rem 0.5rem;
+  margin-bottom: 2rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.backButton:hover {
+  color: var(--text-primary);
+}
+
+.container h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0 0 2rem 0;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.input {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--border-color-focus);
+}
+
+.primaryButton {
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  margin-top: 1rem;
+  background-color: var(--primary-btn-bg);
+  color: var(--primary-btn-text);
+  border: 1px solid transparent;
+  font-size: 1rem;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background-color: var(--primary-btn-hover-bg);
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  composes: primaryButton;
+  background-color: var(--secondary-btn-bg);
+  color: var(--secondary-btn-text);
+  border: 1px solid var(--border-color);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background-color: var(--secondary-btn-hover-bg);
+  border-color: var(--border-color-focus);
+}
+
+.infoBox {
+  background: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: 6px;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border-color);
+}
+
+.infoBox p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.infoBox p:first-child {
+  margin-top: 0;
+}
+
+.infoBox p:last-child {
+  margin-bottom: 0;
+}
+
+.status {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: var(--status-bg);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  word-wrap: break-word;
+}
