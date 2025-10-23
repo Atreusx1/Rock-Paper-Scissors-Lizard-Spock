@@ -25,12 +25,13 @@ mongoose
 
 app.use("/api/games", gamesRouter);
 
-// Serve frontend build only in production vercel environment
+// Serve frontend build only in production
 if (process.env.NODE_ENV === "production") {
   const distPath = path.join(__dirname, "../dist");
   app.use(express.static(distPath));
 
-  app.get("/:path(*)", (req, res) => {
+  // Catch-all for React Router (Express 4 syntax)
+  app.get("*", (req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
