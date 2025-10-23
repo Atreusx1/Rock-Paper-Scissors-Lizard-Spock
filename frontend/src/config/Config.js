@@ -1,4 +1,3 @@
-// config.ts
 import HasherArtifact from "./Hasher.json";
 import RPSArtifact from "./RPS.json";
 
