@@ -4,7 +4,7 @@ import {
   CONTRACT_ABIS,
   HASHER_BYTECODE,
   RPS_BYTECODE,
-} from "@/config/config.js";
+} from "../config/config.js";
 
 let cachedHasherAddress = null;
 

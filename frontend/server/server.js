@@ -25,7 +25,7 @@ mongoose
 
 app.use("/api/games", gamesRouter);
 
-// Serve frontend build only in production
+// Serve frontend build only in production vercel environment
 if (process.env.NODE_ENV === "production") {
   const distPath = path.join(__dirname, "../dist");
   app.use(express.static(distPath));
