@@ -81,7 +81,7 @@ function GameCreate({ signer, account, onBack }) {
       );
 
       setDeployedContract(contractAddr);
-      setStatus("✅ Deployed! Data encrypted & saved.");
+      setStatus("Deployed, Data encrypted & saved.");
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
@@ -146,7 +146,7 @@ function GameCreate({ signer, account, onBack }) {
 
       {deployedContract && (
         <div className={styles.contractInfo}>
-          <h3>🔐 Contract Deployed!</h3>
+          <h3>Contract Deployed</h3>
           <input
             type="text"
             value={deployedContract}

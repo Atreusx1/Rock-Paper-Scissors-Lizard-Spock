@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
     "server": "node server/server.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server/server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
