@@ -88,7 +88,7 @@ export async function deployRPSContract(
     commitment, // bytes32 _c1Hash
     j2Address, // address _j2
     {
-      value: ethers.parseEther(stakeAmount), // payable amount
+      value: ethers.parseEther(stakeAmount),
     }
   );
 
@@ -104,4 +104,45 @@ export async function checkTimeout(rpsContract) {
   const now = Math.floor(Date.now() / 1000);
   const timeoutSeconds = config.timeoutMinutes * 60;
   return now > Number(lastAction) + timeoutSeconds;
+}
+
+export async function claimTimeout(contractAddress, signer, account) {
+  const rps = getRPSContract(contractAddress, signer);
+
+  const [j1, j2, c2, lastAction] = await Promise.all([
+    rps.j1(),
+    rps.j2(),
+    rps.c2(),
+    rps.lastAction(),
+  ]);
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  const timeoutPassed = currentTime > Number(lastAction) + 300;
+
+  if (!timeoutPassed) {
+    const timeLeft = Number(lastAction) + 300 - currentTime;
+    throw new Error(
+      `Timeout not reached. Wait ${Math.ceil(timeLeft / 60)} more minutes.`
+    );
+  }
+
+  const isPlayer1 = account.toLowerCase() === j1.toLowerCase();
+  const isPlayer2 = account.toLowerCase() === j2.toLowerCase();
+  const player2Played = Number(c2) !== 0;
+
+  if (isPlayer1 && !player2Played) {
+    const tx = await rps.j2Timeout();
+    await tx.wait();
+    return { success: true, message: "Your stake was returned.", winner: null };
+  } else if (isPlayer2 && player2Played) {
+    const tx = await rps.j1Timeout();
+    await tx.wait();
+    return {
+      success: true,
+      message: "You won both stakes!",
+      winner: account.toLowerCase(),
+    };
+  } else {
+    throw new Error("You cannot claim timeout for this game.");
+  }
 }

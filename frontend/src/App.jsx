@@ -4,6 +4,9 @@ import Connect from "./Wallet/Connect";
 import GameCreate from "./components/GameCreate";
 import GamePlay from "./components/GamePlay";
 import GameReveal from "./components/GameReveal";
+import GameTimeout from "./components/GameTimeout";
+import GameHistory from "./components/GameHistory";
+import Instructions from "./components/Instructions";
 import styles from "./App.module.css";
 
 function App() {
@@ -32,12 +35,10 @@ function App() {
   async function checkStillConnected() {
     if (window.ethereum && window.ethereum.selectedAddress) {
       try {
-        // Quietly try to reconnect without prompting the user if possible
         const { signer, account } = await connectWallet();
         setSigner(signer);
         setAccount(account);
       } catch (err) {
-        // Ignore silent Reconnection errors, let the user click connect manually
         console.warn("Silent reconnect failed:", err.message);
       }
     }
@@ -49,12 +50,10 @@ function App() {
       setSigner(null);
       setView("menu");
     } else if (account !== accounts[0]) {
-      // If account changed, force a reconnect to get new signer
       checkStillConnected();
     }
   }
 
-  // Callback for when Connect.jsx succeeds
   function handleConnectionSuccess({ signer, account }) {
     setSigner(signer);
     setAccount(account);
@@ -69,14 +68,18 @@ function App() {
     <div className={styles.container}>
       {view === "menu" && (
         <div className={styles.menu}>
-          <h1>RPSLS</h1>
+          <h1>Rock Paper Scissors Lizard Spock</h1>
+          <h4>Web3 Game with Staking</h4>
           <p className={styles.account} title={account}>
-            {account.slice(0, 6)}...{account.slice(-4)}
+            Connected as {account.slice(0, 6)}...{account.slice(-4)}
           </p>
 
           <button onClick={() => setView("create")}>Create Game</button>
           <button onClick={() => setView("play")}>Join Game</button>
           <button onClick={() => setView("reveal")}>Reveal Move</button>
+          <button onClick={() => setView("timeout")}>Claim Timeout</button>
+          <button onClick={() => setView("history")}>Game History</button>
+          <button onClick={() => setView("instructions")}>Instructions</button>
         </div>
       )}
 
@@ -102,6 +105,22 @@ function App() {
           account={account}
           onBack={() => setView("menu")}
         />
+      )}
+
+      {view === "timeout" && (
+        <GameTimeout
+          signer={signer}
+          account={account}
+          onBack={() => setView("menu")}
+        />
+      )}
+
+      {view === "history" && (
+        <GameHistory account={account} onBack={() => setView("menu")} />
+      )}
+
+      {view === "instructions" && (
+        <Instructions onBack={() => setView("menu")} />
       )}
     </div>
   );

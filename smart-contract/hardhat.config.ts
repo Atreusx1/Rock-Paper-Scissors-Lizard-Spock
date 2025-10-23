@@ -2,6 +2,7 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import { configVariable } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import "dotenv/config";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -30,15 +31,22 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
     },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
+    polygonAmoy: {
+      type: "http",
+      chainType: "l1",
+      url: "https://rpc-amoy.polygon.technology",
+      accounts: {
+        mnemonic: configVariable("MNEMONIC"),
+      },
+      chainId: 80002,
     },
     sepolia: {
       type: "http",
       chainType: "l1",
       url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      accounts: {
+        mnemonic: configVariable("MNEMONIC"),
+      },
     },
   },
 };

@@ -4,9 +4,10 @@ import MoveSelect from "./MoveSelect";
 import { getHasherContract, deployRPSContract } from "../utils/contracts";
 import {
   generateSecureSalt,
-  saveGameData,
+  encryptWithSignature,
   downloadGameData,
 } from "../utils/crypto";
+import { saveGameToServer } from "../utils/api";
 import styles from "./Game.module.css";
 
 function GameCreate({ signer, account, onBack }) {
@@ -15,6 +16,7 @@ function GameCreate({ signer, account, onBack }) {
   const [move, setMove] = useState(null);
   const [status, setStatus] = useState("");
   const [gameData, setGameData] = useState(null);
+  const [deployedContract, setDeployedContract] = useState(null);
 
   async function handleCreate() {
     if (!ethers.isAddress(opponent)) {
@@ -29,7 +31,7 @@ function GameCreate({ signer, account, onBack }) {
       setStatus("Generating salt...");
       const salt = generateSecureSalt();
 
-      setStatus("Getting Hasher contract...");
+      setStatus("Getting Hasher...");
       const hasher = await getHasherContract(signer);
 
       setStatus("Computing commitment...");
@@ -44,24 +46,18 @@ function GameCreate({ signer, account, onBack }) {
         creator: account,
       };
 
-      saveGameData("pending", move, salt);
-      downloadGameData(data);
       setGameData(data);
       setStatus("Ready to deploy");
     } catch (err) {
-      console.error(err);
       setStatus(`Error: ${err.message}`);
     }
   }
 
   async function handleDeploy() {
-    if (!gameData) {
-      setStatus("Generate commitment first");
-      return;
-    }
+    if (!gameData) return;
+
     try {
-      setStatus("Deploying RPS contract...");
-      // Pass only commitment and opponent address, stake goes in value
+      setStatus("Deploying contract...");
       const contractAddr = await deployRPSContract(
         signer,
         gameData.commitment,
@@ -69,14 +65,39 @@ function GameCreate({ signer, account, onBack }) {
         gameData.stake
       );
 
-      saveGameData(contractAddr, gameData.move, gameData.salt);
-      setStatus(`Deployed: ${contractAddr}`);
-      alert(`Game created!\nContract: ${contractAddr}\nShare with opponent`);
-      setTimeout(() => onBack(), 2000);
+      setStatus("Encrypting data...");
+      const encrypted = await encryptWithSignature(signer, {
+        move: gameData.move,
+        salt: gameData.salt,
+      });
+
+      setStatus("Saving to server...");
+      await saveGameToServer(
+        contractAddr,
+        account.toLowerCase(),
+        gameData.opponent.toLowerCase(),
+        JSON.stringify(encrypted),
+        gameData.stake
+      );
+
+      setDeployedContract(contractAddr);
+      setStatus("✅ Deployed! Data encrypted & saved.");
     } catch (err) {
-      console.error(err);
-      setStatus(`Deploy failed: ${err.message}`);
+      setStatus(`Error: ${err.message}`);
     }
+  }
+
+  function handleDownloadBackup() {
+    if (!deployedContract || !gameData) return;
+
+    const backupData = {
+      ...gameData,
+      contractAddress: deployedContract,
+      timestamp: Date.now(),
+    };
+
+    downloadGameData(backupData);
+    setStatus("Backup downloaded!");
   }
 
   return (
@@ -117,10 +138,43 @@ function GameCreate({ signer, account, onBack }) {
         Generate Commitment
       </button>
 
-      {gameData && (
+      {gameData && !deployedContract && (
         <button onClick={handleDeploy} className={styles.primaryButton}>
           Deploy Contract
         </button>
+      )}
+
+      {deployedContract && (
+        <div className={styles.contractInfo}>
+          <h3>🔐 Contract Deployed!</h3>
+          <input
+            type="text"
+            value={deployedContract}
+            readOnly
+            className={styles.input}
+            onClick={(e) => e.target.select()}
+          />
+          <button
+            onClick={() => navigator.clipboard.writeText(deployedContract)}
+            className={styles.secondaryButton}
+          >
+            Copy Address
+          </button>
+
+          <button
+            onClick={handleDownloadBackup}
+            className={styles.secondaryButton}
+          >
+            Download Backup (Optional)
+          </button>
+
+          <p className={styles.hint}>
+            <small>
+              Your data is saved on the server, but you can download a backup
+              file as a safety net in case of server issues.
+            </small>
+          </p>
+        </div>
       )}
 
       {status && <p className={styles.status}>{status}</p>}

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import { getRPSContract, checkTimeout } from "../utils/contracts";
-import { loadGameData, clearGameData, uploadGameData } from "../utils/crypto";
+import { getRPSContract } from "../utils/contracts";
+import { decryptWithSignature, uploadGameData } from "../utils/crypto";
+import { loadGameFromServer, updateGameStatus } from "../utils/api";
 import { MOVE_NAMES } from "../config/config";
 import styles from "./Game.module.css";
 
@@ -15,104 +16,27 @@ function GameReveal({ signer, account, onBack }) {
       setStatus("Invalid address");
       return;
     }
+
     try {
-      setStatus("Loading game...");
+      setStatus("Loading from server...");
+      const { encryptedData } = await loadGameFromServer(contractAddr, account);
+
+      setStatus("Decrypting...");
+      const encrypted = JSON.parse(encryptedData);
+      const data = await decryptWithSignature(signer, encrypted);
+
       const rps = getRPSContract(contractAddr, signer);
-      const [j1, c2, stake, isTimeout] = await Promise.all([
-        rps.j1(),
-        rps.c2(),
-        rps.stake(),
-        checkTimeout(rps),
-      ]);
-
-      if (account.toLowerCase() !== j1.toLowerCase()) {
-        setStatus("You are not Player 1");
-        return;
-      }
-
-      const savedData = loadGameData(contractAddr);
-      if (!savedData) {
-        setStatus("No saved data. Upload backup file.");
-        return;
-      }
+      const [c2, stake] = await Promise.all([rps.c2(), rps.stake()]);
 
       setGameState({
-        myMove: savedData.move,
+        myMove: data.move,
+        salt: data.salt,
         opponentMove: Number(c2),
-        salt: savedData.salt,
         stake: ethers.formatEther(stake),
-        canTimeout: isTimeout && Number(c2) === 0,
         hasPlayed: Number(c2) !== 0,
       });
-      setStatus("Ready to reveal");
-    } catch (err) {
-      setStatus(`Error: ${err.message}`);
-    }
-  }
 
-  async function handleReveal() {
-    try {
-      setStatus("Revealing move...");
-      const rps = getRPSContract(contractAddr, signer);
-
-      const [j1Addr, j2Addr, c2Move] = await Promise.all([
-        rps.j1(),
-        rps.j2(),
-        rps.c2(),
-      ]);
-
-      console.log("=== PLAYER INFO ===");
-      console.log("j1 (creator):", j1Addr);
-      console.log("j2 (opponent):", j2Addr);
-      console.log("Your address:", account);
-      console.log("j1 match:", j1Addr.toLowerCase() === account.toLowerCase());
-
-      console.log("\n=== MOVES ===");
-      console.log(
-        "Your move (j1):",
-        gameState.myMove,
-        MOVE_NAMES[gameState.myMove]
-      );
-      console.log(
-        "Opponent move (j2):",
-        Number(c2Move),
-        MOVE_NAMES[Number(c2Move)]
-      );
-
-      // Test who should win
-      const shouldJ1Win = await rps.win(gameState.myMove, c2Move);
-      const shouldJ2Win = await rps.win(c2Move, gameState.myMove);
-
-      console.log("\n=== WIN LOGIC ===");
-      console.log("j1 wins?", shouldJ1Win);
-      console.log("j2 wins?", shouldJ2Win);
-      console.log("Tie?", !shouldJ1Win && !shouldJ2Win);
-
-      const saltUint = ethers.toBigInt(gameState.salt);
-      const tx = await rps.solve(gameState.myMove, saltUint);
-      await tx.wait();
-
-      // After solve, try to get transaction logs
-      console.log("\n=== TRANSACTION ===");
-      console.log("Transaction hash:", tx.hash);
-
-      clearGameData(contractAddr);
-      setStatus("Reveal successful!");
-    } catch (err) {
-      console.error("Full error:", err);
-      setStatus(`Error: ${err.message}`);
-    }
-  }
-
-  async function handleTimeout() {
-    try {
-      setStatus("Claiming timeout...");
-      const rps = getRPSContract(contractAddr, signer);
-      const tx = await rps.j2Timeout();
-      await tx.wait();
-      clearGameData(contractAddr);
-      setStatus("Timeout claimed!");
-      setTimeout(() => onBack(), 2000);
+      setStatus("Decrypted!");
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
@@ -121,11 +45,60 @@ function GameReveal({ signer, account, onBack }) {
   async function handleUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
+
     try {
-      await uploadGameData(file);
-      setStatus("Backup restored. Load game now.");
+      setStatus("Reading backup...");
+      const data = await uploadGameData(file);
+
+      setContractAddr(data.contractAddress);
+
+      const rps = getRPSContract(data.contractAddress, signer);
+      const [c2, stake] = await Promise.all([rps.c2(), rps.stake()]);
+
+      setGameState({
+        myMove: data.move,
+        salt: data.salt,
+        opponentMove: Number(c2),
+        stake: ethers.formatEther(stake),
+        hasPlayed: Number(c2) !== 0,
+      });
+
+      setStatus("Backup loaded!");
     } catch (err) {
-      setStatus(`Upload failed: ${err.message}`);
+      setStatus(`Upload error: ${err.message}`);
+    }
+  }
+
+  async function handleReveal() {
+    try {
+      setStatus("Revealing...");
+      const rps = getRPSContract(contractAddr, signer);
+
+      const tx = await rps.solve(
+        gameState.myMove,
+        ethers.toBigInt(gameState.salt)
+      );
+      await tx.wait();
+
+      const [j1Win, j2Win] = await Promise.all([
+        rps.win(gameState.myMove, gameState.opponentMove),
+        rps.win(gameState.opponentMove, gameState.myMove),
+      ]);
+
+      let winner = null;
+      if (j1Win) winner = account.toLowerCase();
+      else if (j2Win) {
+        const j2 = await rps.j2();
+        winner = j2.toLowerCase();
+      }
+
+      await updateGameStatus(contractAddr, "revealed", winner);
+
+      setStatus(
+        `Revealed! ${j1Win ? "You win!" : j2Win ? "You lose!" : "Tie!"}`
+      );
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
     }
   }
 
@@ -134,7 +107,7 @@ function GameReveal({ signer, account, onBack }) {
       <button onClick={onBack} className={styles.backButton}>
         Back
       </button>
-      <h2>Reveal & Solve</h2>
+      <h2>Reveal Game</h2>
 
       <label className={styles.label}>
         Contract Address
@@ -147,46 +120,31 @@ function GameReveal({ signer, account, onBack }) {
         />
       </label>
 
-      <label className={styles.label}>
-        Upload Backup (optional)
-        <input type="file" accept=".json" onChange={handleUpload} />
-      </label>
-
-      <button onClick={loadGame} className={styles.secondaryButton}>
+      <button onClick={loadGame} className={styles.primaryButton}>
         Load Game
       </button>
 
+      <label className={styles.label}>
+        Or upload backup file
+        <input type="file" accept=".json" onChange={handleUpload} />
+      </label>
+
       {gameState && (
-        <div className={styles.infoBox}>
+        <div className={styles.gameInfo}>
           <p>
-            <b>Your Move:</b> {MOVE_NAMES[gameState.myMove]}
+            <strong>Your Move:</strong> {MOVE_NAMES[gameState.myMove]}
           </p>
           <p>
-            <b>Opponent:</b>{" "}
+            <strong>Opponent:</strong>{" "}
             {gameState.hasPlayed
               ? MOVE_NAMES[gameState.opponentMove]
-              : "Not played"}
-          </p>
-          <p>
-            <b>Stake:</b> {gameState.stake} ETH
+              : "Waiting..."}
           </p>
 
-          {gameState.hasPlayed ? (
+          {gameState.hasPlayed && (
             <button onClick={handleReveal} className={styles.primaryButton}>
-              Reveal & Solve
+              Reveal Move
             </button>
-          ) : (
-            <>
-              <p>Waiting for Player 2...</p>
-              {gameState.canTimeout && (
-                <button
-                  onClick={handleTimeout}
-                  className={styles.primaryButton}
-                >
-                  Claim Timeout
-                </button>
-              )}
-            </>
           )}
         </div>
       )}

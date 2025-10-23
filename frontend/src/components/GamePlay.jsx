@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import MoveSelect from "./MoveSelect";
 import { getRPSContract } from "../utils/contracts";
 import styles from "./Game.module.css";
+import { updateGameStatus } from "../utils/api";
 
 function GamePlay({ signer, account, onBack }) {
   const [contractAddr, setContractAddr] = useState("");
@@ -56,8 +57,10 @@ function GamePlay({ signer, account, onBack }) {
       const stake = await rps.stake();
       const tx = await rps.play(move, { value: stake });
       await tx.wait();
+      await updateGameStatus(contractAddr, "playing", null);
+
       setStatus("Move played! Player 1 can reveal.");
-      setTimeout(() => onBack(), 2000);
+      // setTimeout(() => onBack(), 2000);
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
